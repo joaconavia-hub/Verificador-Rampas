@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificador de despeje en rampas</title>
+<style>
+:root{
+  --bg:#f6f5f1;--panel:#ffffff;--panel2:#fbfaf7;--ink:#1d1d1b;--ink2:#55544f;--ink3:#8a8983;
+  --line:#e2e0d8;--line2:#cfcdc3;--accent:#1f6fd1;--accent-bg:#e6f0fb;
+  --ok:#17804f;--ok-bg:#e3f4ea;--warn:#a86300;--warn-bg:#fbf0dc;--bad:#c23b3a;--bad-bg:#fbe7e6;
+  --terrain:#d8d5ca;--terrain-line:#5b5a55;--grid:#ecebe5;--car:#b9d5f3;--car-line:#1b5da8;--glass:#6aa3e0;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#161615;--panel:#1f1f1d;--panel2:#252523;--ink:#efeee9;--ink2:#c1c0b6;--ink3:#8d8c85;
+  --line:#34342f;--line2:#45453f;--accent:#5a9ef0;--accent-bg:#1c2c40;
+  --ok:#4cc38a;--ok-bg:#16301f;--warn:#e5a33a;--warn-bg:#35280f;--bad:#ef6f6d;--bad-bg:#3a1a19;
+  --terrain:#3a3934;--terrain-line:#b9b8ae;--grid:#2a2a27;--car:#27415f;--car-line:#7fb3ee;--glass:#3c6d9f;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:16px;font-weight:600;margin:0 12px 0 0}
+main{display:grid;grid-template-columns:450px minmax(0,1fr);gap:14px;padding:14px;max-width:1700px;margin:0 auto}
+@media (max-width:1000px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.card h2{font-size:14px;font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.card h2 .sp{flex:1}
+.muted{color:var(--ink3);font-size:12px}
+input,select,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=number],select,textarea{background:var(--panel2);border:1px solid var(--line2);border-radius:6px;padding:4px 6px;width:100%}
+input[type=text]:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button{background:var(--panel);border:1px solid var(--line2);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+button:hover{background:var(--panel2);border-color:var(--ink3)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.sm{padding:2px 7px;font-size:12px}
+button.ic{padding:2px 6px;min-width:26px}
+button.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+table{border-collapse:collapse;width:100%}
+th,td{padding:4px 5px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;font-weight:600;color:var(--ink2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tramos td input{text-align:right;padding:3px 5px;width:70px}
+.tramos td{padding:3px 3px}
+.tramos button.ic{min-width:22px;padding:1px 4px}
+.tramos td.ro{color:var(--ink2);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.veh{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--panel2)}
+.veh .hd{display:flex;align-items:center;gap:8px}
+.veh .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.veh .nm{flex:1;font-weight:600;background:transparent;border:1px solid transparent;padding:2px 4px}
+.veh .nm:hover{border-color:var(--line2)}
+.fields{display:grid;grid-template-columns:1fr 92px;gap:4px 8px;margin-top:8px;align-items:center;font-size:13px}
+.fields input{text-align:right}
+.fields label{color:var(--ink2)}
+.badge{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}
+.stat{background:var(--panel2);border-radius:var(--r);padding:6px 10px}
+.stat .l{font-size:12px;color:var(--ink2)}.stat .v{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+svg text{font-family:inherit}
+.tx{fill:var(--ink2);font-size:11px}.tx2{fill:var(--ink3);font-size:10px}.txb{fill:var(--ink);font-size:12px;font-weight:600}
+.terrain{fill:var(--terrain);opacity:.7}.tline{fill:none;stroke:var(--terrain-line);stroke-width:2}
+.grid{stroke:var(--grid);stroke-width:1}
+tr.sel td{background:var(--accent-bg)}
+tr.clk{cursor:pointer}
+.hist{border-bottom:1px solid var(--line);padding:7px 0}
+.hist:last-child{border-bottom:none}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.status{font-size:12px;color:var(--ink3)}
+details summary{cursor:pointer;color:var(--ink2);font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+.seg button{border:none;border-radius:0;border-right:1px solid var(--line2)}
+.seg button:last-child{border-right:none}
+input[type=range]{width:100%}
+@media print{header .row,button,.noprint,input[type=range]{display:none!important}main{display:block}.card{break-inside:avoid;border:1px solid #999}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Verificador de despeje en rampas</h1>
+  <div class="row">
+    <span class="muted">Proyecto</span>
+    <select id="projSel" style="width:220px"></select>
+    <input type="text" id="projName" style="width:220px" title="Nombre del proyecto">
+    <button id="projNew">Nuevo</button>
+    <button id="projDup">Duplicar</button>
+    <button id="projDel">Eliminar</button>
+    <button id="projExp">Exportar proyecto</button>
+    <button id="projImp">Importar</button>
+    <input type="file" id="fileImp" accept=".json,application/json" style="display:none">
+    <button id="printBtn">Imprimir / PDF</button>
+  </div>
+  <span class="status grow" id="status" style="text-align:right"></span>
+</header>
+
+<main>
+<aside>
+  <div class="card">
+    <h2>Rampa<span class="sp"></span><button class="sm" id="pviToggle">Importar puntos (PVI)</button></h2>
+    <div id="pviBox" style="display:none;margin-bottom:10px">
+      <p class="muted" style="margin:0 0 4px">Pegá una línea por punto: progresiva y cota (separadas por espacio, tabulación o punto y coma). Se reemplazan los tramos actuales.</p>
+      <textarea id="pviTxt" rows="6" placeholder="0.49  15.39&#10;3.49  15.45&#10;6.99  15.38"></textarea>
+      <div class="row" style="margin-top:6px"><button class="pri sm" id="pviApply">Convertir a tramos</button><span class="muted" id="pviMsg"></span></div>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <label class="muted">Prog. inicial (m)</label><input type="text" id="x0" style="width:80px">
+      <label class="muted">Cota inicial (m)</label><input type="text" id="z0" style="width:80px">
+    </div>
+    <table class="tramos">
+      <thead><tr><th>#</th><th class="num">Longitud (m)</th><th class="num">Pendiente (%)</th><th class="num">Prog. fin</th><th class="num">Cota fin</th><th></th></tr></thead>
+      <tbody id="tramosBody"></tbody>
+    </table>
+    <div class="row" style="margin-top:8px"><button class="sm" id="addTramo">+ Agregar tramo</button><span class="muted grow" style="text-align:right">Pendiente negativa = baja en el sentido de la progresiva</span></div>
+    <details style="margin-top:10px"><summary>Extremos de la rampa</summary>
+      <p class="muted" style="margin:6px 0">Para que el vehículo pueda entrar y salir del perfil, se agregan 8 m en cada extremo.</p>
+      <select id="extMode"><option value="cont">Continuar la pendiente del primer y último tramo</option><option value="flat">Horizontal (0%)</option></select>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Vehículos<span class="sp"></span><select id="presetSel" style="width:auto"><option value="">+ Agregar…</option></select></h2>
+    <div id="vehList"></div>
+    <p class="muted" style="margin:4px 0 0">Tildá los vehículos a simular. Las medidas se toman de la envolvente de despeje: entre ejes la altura es constante (despeje) y en los voladizos varía linealmente desde el eje hasta la punta.</p>
+  </div>
+
+  <div class="card">
+    <h2>Criterio</h2>
+    <div class="row">
+      <label class="muted">Despeje mínimo exigido (cm)</label><input type="text" id="minReq" style="width:70px">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label class="muted">Sentido</label>
+      <label><input type="checkbox" id="dirIn"> Entrada (trompa hacia el final)</label>
+      <label><input type="checkbox" id="dirOut"> Salida (trompa hacia el inicio)</label>
+    </div>
+    <p class="muted" style="margin:6px 0 0">"Entrada" = el vehículo avanza en el sentido de la progresiva. "Salida" = sube de frente hacia el inicio, así que los voladizos quedan invertidos respecto del perfil.</p>
+  </div>
+</aside>
+
+<section>
+  <div class="card">
+    <h2>Vista<span class="sp"></span>
+      <select id="runSel" style="width:auto;max-width:320px"></select>
+    </h2>
+    <svg id="view" width="100%" height="380" style="display:block"></svg>
+    <div class="row noprint" style="margin-top:6px">
+      <span class="muted">Posición</span><input type="range" id="pos" min="0" max="10000" step="1" class="grow" style="flex:1">
+    </div>
+    <div class="row noprint" style="margin-top:4px">
+      <span class="muted">Ancho de vista</span><input type="range" id="win" min="6" max="60" step="1" value="14" style="width:140px"><span id="winV" class="muted"></span>
+      <span class="muted" style="margin-left:8px">Escala vertical</span>
+      <span class="seg" id="vexSeg"><button data-v="1">×1</button><button data-v="2">×2</button><button data-v="3">×3</button><button data-v="5">×5</button></span>
+      <button class="sm" id="fitAll">Ver rampa completa</button>
+      <span class="grow"></span>
+      <span id="critBtns" class="row"></span>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <h2>Despeje a lo largo del recorrido<span class="sp"></span><span class="muted">Clic en el gráfico para mover el vehículo seleccionado</span></h2>
+    <svg id="chart" width="100%" height="230" style="display:block"></svg>
+    <div id="legend" class="row" style="margin-top:4px;font-size:12px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Resultados</h2>
+    <table id="resTbl"><thead><tr><th>Vehículo</th><th>Sentido</th><th class="num">Despeje mínimo</th><th>Elemento</th><th class="num">Prog. contacto</th><th>Estado</th></tr></thead><tbody></tbody></table>
+    <h2 style="margin-top:14px">Puntos críticos del vehículo seleccionado</h2>
+    <table id="critTbl"><thead><tr><th>#</th><th class="num">Despeje</th><th>Elemento</th><th class="num">Prog. contacto</th><th class="num" title="Entrada: eje trasero · Salida: eje delantero">Prog. eje lado inicio</th><th class="num">Inclinación</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Simulaciones guardadas<span class="sp"></span></h2>
+    <div class="row noprint"><input type="text" id="simName" class="grow" placeholder="Nombre (ej.: v3 con lomo +5%)" style="flex:1"><button class="pri" id="simSave">Guardar simulación</button></div>
+    <p class="muted" style="margin:6px 0">Cada simulación guarda la rampa, los vehículos y el criterio. "Restaurar" vuelve a ese estado (antes se guarda automáticamente el estado actual).</p>
+    <div id="histList"></div>
+  </div>
+
+  <div class="card muted">
+    Modelo: perfil longitudinal en 2D, ruedas con contacto puntual sobre el eje del perfil, despeje medido en vertical entre la envolvente del vehículo y la rasante. El cálculo es exacto para perfiles de tramos rectos (se evalúan todos los quiebres de la rasante y de la envolvente). No considera compresión de suspensión, carga, radio de neumáticos ni entradas en diagonal. Los datos se guardan en este navegador; usá "Exportar proyecto" para tener un respaldo o pasarlo a otra computadora.
+  </div>
+</section>
+</main>
+
+<script>
+"use strict";
+/* ---------- utilidades ---------- */
+const $=id=>document.getElementById(id);
+const num=s=>{if(typeof s==='number')return s;const v=parseFloat(String(s).trim().replace(',','.'));return isFinite(v)?v:NaN};
+const fmt=(v,d=2)=>isFinite(v)?v.toFixed(d).replace('.',','):'–';
+const fmtCm=c=>isFinite(c)?(c<-0.0005?'toca ':'')+Math.abs(c*100).toFixed(1).replace('.',',')+' cm':'–';
+const prog=x=>{const s=x<0?'-':'';x=Math.abs(x);const km=Math.floor(x/1000),m=x-km*1000;return s+km+'+'+m.toFixed(2).padStart(6,'0')};
+const uid=()=>Math.random().toString(36).slice(2,10);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const COLORS=['#2a78d6','#eb6834','#1baf7a','#c98500','#6250d6','#d55181','#008300','#e34948'];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- presets ---------- */
+const PRESETS=[
+ {name:'Plantilla B99 (AS/NZS 2890.1)',WB:3.05,hB:0.12,OR:1.20,hR:0.12,OF:0.95,hF:0.12,H:1.50,body:'auto'},
+ {name:'Sedán tipo (Toyota Camry)',WB:2.825,hB:0.145,OR:1.085,hR:0.20,OF:0.975,hF:0.15,H:1.45,body:'auto'},
+ {name:'Deportivo bajo',WB:2.70,hB:0.10,OR:0.90,hR:0.15,OF:0.95,hF:0.10,H:1.25,body:'auto'},
+ {name:'Utilitario / furgón',WB:3.30,hB:0.18,OR:1.40,hR:0.30,OF:0.95,hF:0.25,H:2.00,body:'van'},
+ {name:'Vehículo en blanco',WB:2.70,hB:0.14,OR:1.00,hR:0.20,OF:0.90,hF:0.15,H:1.45,body:'auto'}
+];
+function newVeh(p,i){return Object.assign({id:uid(),on:true,color:COLORS[i%COLORS.length]},clone(p))}
+function defaultProject(name){
+ return {id:uid(),name:name||'Rampa acceso shopping',
+  ramp:{x0:0.49,z0:15.39,tramos:[{L:3.0,i:2},{L:3.5,i:-2},{L:1.0,i:5},{L:2.5,i:-8},{L:8.82,i:-15.02},{L:3.0,i:-8},{L:8,i:0}]},
+  vehicles:[newVeh(PRESETS[0],0),newVeh(PRESETS[1],1)],
+  opts:{minReq:0,ext:'cont',dirIn:true,dirOut:false},
+  sims:[]};
+}
+
+/* ---------- almacenamiento ---------- */
+const KEY='verificador_rampas_v1';
+let DB={projects:[],current:null},storageOK=true;
+function load(){try{const s=localStorage.getItem(KEY);if(s){const d=JSON.parse(s);if(d&&Array.isArray(d.projects)&&d.projects.length)DB=d}}catch(e){storageOK=false}
+ if(!DB.projects.length){const p=defaultProject();DB.projects.push(p);DB.current=p.id}
+ if(!DB.projects.find(p=>p.id===DB.current))DB.current=DB.projects[0].id}
+let saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(DB));storageOK=true;setStatus('Guardado en este navegador · '+new Date().toLocaleTimeString())}catch(e){storageOK=false;setStatus('No se pudo guardar en el navegador: exportá el proyecto para no perder cambios')}},300)}
+function setStatus(t){$('status').textContent=t}
+const P=()=>DB.projects.find(p=>p.id===DB.current);
+
+/* ---------- geometría ---------- */
+function rampPoints(r,ext){
+ const pts=[];let x=num(r.x0),z=num(r.z0);if(!isFinite(x))x=0;if(!isFinite(z))z=0;
+ const tr=r.tramos.filter(t=>isFinite(num(t.L))&&num(t.L)>0&&isFinite(num(t.i)));
+ const E=8,g0=tr.length?num(tr[0].i)/100:0,g1=tr.length?num(tr[tr.length-1].i)/100:0;
+ pts.push({x:x-E,z:z-(ext==='cont'?g0*E:0),ext:true});
+ pts.push({x,z,pvi:true});
+ tr.forEach(t=>{x+=num(t.L);z+=num(t.L)*num(t.i)/100;pts.push({x,z,pvi:true})});
+ pts.push({x:x+E,z:z+(ext==='cont'?g1*E:0),ext:true});
+ return pts}
+function makeY(pts){const xs=pts.map(p=>p.x),zs=pts.map(p=>p.z),n=pts.length;
+ return x=>{if(x<=xs[0])return zs[0];if(x>=xs[n-1])return zs[n-1];let lo=0,hi=n-1;while(hi-lo>1){const m=(lo+hi)>>1;if(xs[m]<=x)lo=m;else hi=m}
+  return zs[lo]+(zs[hi]-zs[lo])*(x-xs[lo])/(xs[hi]-xs[lo])}}
+function orient(v,dir){const a={WB:num(v.WB),hB:num(v.hB),OR:num(v.OR),hR:num(v.hR),OF:num(v.OF),hF:num(v.hF),H:num(v.H)||1.45,flip:dir==='out'};
+ if(a.flip){[a.OR,a.OF]=[a.OF,a.OR];[a.hR,a.hF]=[a.hF,a.hR]}return a}
+function hAt(v,t){return t<0?v.hR+(v.hB-v.hR)*(t+v.OR)/v.OR:t<=v.WB?v.hB:v.hB+(v.hF-v.hB)*(t-v.WB)/v.OF}
+function pose(Y,v,xr){const zr=Y(xr);let xf=xr+v.WB;for(let i=0;i<12;i++){const dz=Y(xf)-zr;xf=xr+Math.sqrt(Math.max(v.WB*v.WB-dz*dz,0))}
+ const dx=xf-xr,dz=Y(xf)-zr,d=Math.hypot(dx,dz);return{xr,zr,xf,ux:dx/d,uz:dz/d,nx:-dz/d,nz:dx/d,sl:dz/dx}}
+const W=(Q,t,h)=>[Q.xr+Q.ux*t+Q.nx*h,Q.zr+Q.uz*t+Q.nz*h];
+function elemName(v,t){if(t<0)return v.flip?'voladizo delantero':'voladizo trasero';if(t<=v.WB)return 'entre ejes';return v.flip?'voladizo trasero':'voladizo delantero'}
+function clearance(Y,pvis,v,Q){
+ let best={c:Infinity};
+ const test=t=>{t=Math.max(-v.OR,Math.min(v.WB+v.OF,t));const[px,pz]=W(Q,t,hAt(v,t));const c=pz-Y(px);if(c<best.c)best={c,t,px,pz}};
+ [-v.OR,0,v.WB,v.WB+v.OF].forEach(test);
+ const xa=W(Q,-v.OR,v.hR)[0],xb=W(Q,v.WB+v.OF,v.hF)[0];
+ for(const xk of pvis){if(xk<xa||xk>xb)continue;let t=(xk-Q.xr)/Q.ux;for(let i=0;i<3;i++){const tc=Math.max(-v.OR,Math.min(v.WB+v.OF,t));t=(xk-Q.xr-Q.nx*hAt(v,tc))/Q.ux}test(t)}
+ best.elem=elemName(v,best.t);return best}
+function simulate(pts,veh,dir){
+ const v=orient(veh,dir);if(![v.WB,v.OR,v.OF,v.hB,v.hR,v.hF].every(n=>isFinite(n)&&n>=0)||v.WB<=0)return null;
+ const Y=makeY(pts),pvis=pts.map(p=>p.x);
+ const x0=pts[0].x+v.OR+0.01,x1=pts[pts.length-1].x-v.WB-v.OF-0.01;if(x1<=x0)return null;
+ const step=0.01,arr=[];
+ for(let x=x0;x<=x1;x+=step){const Q=pose(Y,v,x);const c=clearance(Y,pvis,v,Q);arr.push({xr:x,xm:(x+Q.xf)/2,c:c.c,elem:c.elem,px:c.px,sl:Q.sl})}
+ let w=arr[0];arr.forEach(a=>{if(a.c<w.c)w=a});
+ // mínimos locales
+ const loc=[];for(let i=1;i<arr.length-1;i++){if(arr[i].c<=arr[i-1].c&&arr[i].c<arr[i+1].c)loc.push(arr[i])}
+ loc.sort((a,b)=>a.c-b.c);const crit=[];for(const m of loc){if(crit.length>=8)break;if(m.c>w.c+0.15&&crit.length>=3)break;if(!crit.some(c=>Math.abs(c.px-m.px)<0.8&&c.elem===m.elem))crit.push(m)}
+ return{v,veh,dir,arr,worst:w,crit,x0,x1,Y}}
+
+/* ---------- estado de UI ---------- */
+let RUNS=[],sel=null,posX=null,vex=1,win=14,fitAll=false,PTS=[];
+
+/* ---------- render: proyectos ---------- */
+function renderProjects(){const s=$('projSel');s.innerHTML=DB.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');s.value=DB.current;$('projName').value=P().name}
+$('projSel').onchange=e=>{DB.current=e.target.value;save();loadProject()};
+$('projName').oninput=e=>{P().name=e.target.value;const o=$('projSel').selectedOptions[0];if(o)o.textContent=e.target.value;save()};
+$('projNew').onclick=()=>{const p=defaultProject('Proyecto '+(DB.projects.length+1));p.ramp={x0:0,z0:0,tramos:[{L:5,i:0},{L:10,i:-15},{L:5,i:0}]};DB.projects.push(p);DB.current=p.id;save();loadProject()};
+$('projDup').onclick=()=>{const p=clone(P());p.id=uid();p.name+=' (copia)';DB.projects.push(p);DB.current=p.id;save();loadProject()};
+$('projDel').onclick=()=>{if(DB.projects.length<2){alert('Tiene que quedar al menos un proyecto.');return}if(!confirm('¿Eliminar el proyecto "'+P().name+'" y sus simulaciones?'))return;DB.projects=DB.projects.filter(p=>p.id!==DB.current);DB.current=DB.projects[0].id;save();loadProject()};
+$('projExp').onclick=()=>{const b=new Blob([JSON.stringify({tipo:'verificador-rampas',version:1,proyecto:P()},null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(P().name||'proyecto').replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]/g,'_')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
+$('projImp').onclick=()=>$('fileImp').click();
+$('fileImp').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);const p=d.proyecto||d;if(!p.ramp||!p.vehicles)throw 0;p.id=uid();p.sims=p.sims||[];p.opts=Object.assign({minReq:0,ext:'cont',dirIn:true,dirOut:false},p.opts||{});DB.projects.push(p);DB.current=p.id;save();loadProject();setStatus('Proyecto importado')}catch(err){alert('El archivo no es un proyecto válido.')}};rd.readAsText(f);e.target.value=''};
+$('printBtn').onclick=()=>window.print();
+
+/* ---------- render: rampa ---------- */
+function renderRamp(){const r=P().ramp;$('x0').value=String(r.x0).replace('.',',');$('z0').value=String(r.z0).replace('.',',');
+ const tb=$('tramosBody');tb.innerHTML='';
+ r.tramos.forEach((t,k)=>{const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${k+1}</td><td><input type="text" data-k="${k}" data-f="L" value="${String(t.L).replace('.',',')}"></td><td><input type="text" data-k="${k}" data-f="i" value="${String(t.i).replace('.',',')}"></td><td class="ro" id="pf${k}"></td><td class="ro" id="cf${k}"></td>
+  <td style="white-space:nowrap"><button class="ic sm" data-a="up" data-k="${k}" title="Subir">↑</button><button class="ic sm" data-a="dn" data-k="${k}" title="Bajar">↓</button><button class="ic sm" data-a="ins" data-k="${k}" title="Insertar debajo">+</button><button class="ic sm" data-a="del" data-k="${k}" title="Eliminar">✕</button></td>`;tb.appendChild(tr)});
+ updateRampRO()}
+function updateRampRO(){const r=P().ramp;let x=num(r.x0),z=num(r.z0);r.tramos.forEach((t,k)=>{const L=num(t.L),i=num(t.i);const ok=isFinite(L)&&L>0&&isFinite(i);if(ok){x+=L;z+=L*i/100}
+ const a=$('pf'+k),b=$('cf'+k);if(a){a.textContent=ok?prog(x):'revisar';a.style.color=ok?'':'var(--bad)'}if(b)b.textContent=ok?fmt(z,3):''})}
+$('tramosBody').addEventListener('input',e=>{const el=e.target;if(!el.dataset.f)return;const t=P().ramp.tramos[+el.dataset.k];const v=num(el.value);t[el.dataset.f]=isFinite(v)?v:el.value;updateRampRO();changed()});
+$('tramosBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=+b.dataset.k,T=P().ramp.tramos;
+ if(b.dataset.a==='up'&&k>0)[T[k-1],T[k]]=[T[k],T[k-1]];if(b.dataset.a==='dn'&&k<T.length-1)[T[k+1],T[k]]=[T[k],T[k+1]];
+ if(b.dataset.a==='ins')T.splice(k+1,0,{L:2,i:T[k].i});if(b.dataset.a==='del'){if(T.length<2)return;T.splice(k,1)}renderRamp();changed()});
+$('addTramo').onclick=()=>{const T=P().ramp.tramos;T.push({L:2,i:T.length?T[T.length-1].i:0});renderRamp();changed()};
+['x0','z0'].forEach(id=>$(id).oninput=e=>{const v=num(e.target.value);P().ramp[id]=isFinite(v)?v:e.target.value;updateRampRO();changed()});
+$('extMode').onchange=e=>{P().opts.ext=e.target.value;changed()};
+$('pviToggle').onclick=()=>{const b=$('pviBox');b.style.display=b.style.display==='none'?'block':'none'};
+$('pviApply').onclick=()=>{const lines=$('pviTxt').value.split(/\n/).map(l=>l.trim()).filter(Boolean);const pts=[];
+ for(const l of lines){const m=l.replace(/;/g,' ').split(/[\s\t]+/).filter(Boolean);if(m.length<2)continue;
+  const b=num(m[1]);let x;
+  if(/\d\+\d/.test(m[0])){const [km,mm]=m[0].split('+');x=num(km)*1000+num(mm)}else x=num(m[0]);
+  if(isFinite(x)&&isFinite(b))pts.push([x,b])}
+ if(pts.length<2){$('pviMsg').textContent='Se necesitan al menos 2 puntos válidos.';return}
+ pts.sort((p,q)=>p[0]-q[0]);const r=P().ramp;r.x0=+pts[0][0].toFixed(3);r.z0=+pts[0][1].toFixed(3);r.tramos=[];
+ for(let k=1;k<pts.length;k++){const L=pts[k][0]-pts[k-1][0];if(L<=0)continue;r.tramos.push({L:+L.toFixed(3),i:+((pts[k][1]-pts[k-1][1])/L*100).toFixed(3)})}
+ $('pviMsg').textContent=r.tramos.length+' tramos creados';renderRamp();changed()};
+
+/* ---------- render: vehículos ---------- */
+const FIELDS=[['WB','Distancia entre ejes','m'],['hB','Despeje entre ejes','m'],['OR','Cola → eje trasero','m'],['hR','Altura de la cola','m'],['OF','Trompa → eje delantero','m'],['hF','Altura de la trompa','m'],['H','Altura total (solo dibujo)','m']];
+function renderVehicles(){const L=$('vehList');L.innerHTML='';
+ P().vehicles.forEach((v,k)=>{const d=document.createElement('div');d.className='veh';
+  d.innerHTML=`<div class="hd"><input type="checkbox" data-k="${k}" data-f="on" ${v.on?'checked':''} title="Incluir en la simulación"><span class="sw" style="background:${v.color}"></span><input type="text" class="nm" data-k="${k}" data-f="name" value="${esc(v.name)}"><button class="ic sm" data-a="tog" data-k="${k}" title="Editar medidas">✎</button><button class="ic sm" data-a="dup" data-k="${k}" title="Duplicar">⧉</button><button class="ic sm" data-a="del" data-k="${k}" title="Eliminar">✕</button></div>
+  <div class="fields" id="vf${k}" style="display:${v._open?'grid':'none'}">${FIELDS.map(([f,l])=>`<label>${l} (m)</label><input type="text" data-k="${k}" data-f="${f}" value="${String(v[f]).replace('.',',')}">`).join('')}
+  <label>Carrocería (dibujo)</label><select data-k="${k}" data-f="body"><option value="auto" ${v.body!=='van'?'selected':''}>Auto</option><option value="van" ${v.body==='van'?'selected':''}>Utilitario</option></select>
+  <label>Color</label><input type="color" data-k="${k}" data-f="color" value="${v.color}" style="width:92px;height:26px;padding:0;border:none;background:none"></div>
+  <div class="muted" style="margin-top:4px">${fmt(num(v.WB))} m entre ejes · despeje ${fmt(num(v.hB)*100,1)} cm · voladizos ${fmt(num(v.OR))} / ${fmt(num(v.OF))} m · puntas ${fmt(num(v.hR)*100,0)} / ${fmt(num(v.hF)*100,0)} cm</div>`;
+  L.appendChild(d)})}
+$('vehList').addEventListener('input',e=>{const el=e.target,f=el.dataset.f;if(!f)return;const v=P().vehicles[+el.dataset.k];
+ if(f==='on')v.on=el.checked;else if(f==='name'||f==='body'||f==='color')v[f]=el.value;else{const n=num(el.value);v[f]=isFinite(n)?n:el.value}
+ if(f==='color'||f==='on'||f==='body'){renderVehicles()}changed()});
+$('vehList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=+b.dataset.k,V=P().vehicles;
+ if(b.dataset.a==='tog'){V[k]._open=!V[k]._open;renderVehicles();return}
+ if(b.dataset.a==='dup'){const c=clone(V[k]);c.id=uid();c.name+=' (copia)';c.color=COLORS[V.length%COLORS.length];V.splice(k+1,0,c)}
+ if(b.dataset.a==='del'){if(!confirm('¿Eliminar "'+V[k].name+'"?'))return;V.splice(k,1)}
+ renderVehicles();changed()});
+$('presetSel').innerHTML='<option value="">+ Agregar…</option>'+PRESETS.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('');
+$('presetSel').onchange=e=>{if(e.target.value==='')return;const V=P().vehicles;const v=newVeh(PRESETS[+e.target.value],V.length);v._open=true;V.push(v);e.target.value='';renderVehicles();changed()};
+
+/* ---------- criterio ---------- */
+function renderOpts(){const o=P().opts;$('minReq').value=String(o.minReq).replace('.',',');$('dirIn').checked=!!o.dirIn;$('dirOut').checked=!!o.dirOut;$('extMode').value=o.ext||'cont'}
+$('minReq').oninput=e=>{const v=num(e.target.value);P().opts.minReq=isFinite(v)?v:0;changed()};
+$('dirIn').onchange=e=>{P().opts.dirIn=e.target.checked;changed()};
+$('dirOut').onchange=e=>{P().opts.dirOut=e.target.checked;changed()};
+
+/* ---------- simulación ---------- */
+let simT=null;
+function changed(){save();clearTimeout(simT);simT=setTimeout(runAll,200)}
+function runAll(){const p=P();PTS=rampPoints(p.ramp,p.opts.ext);const dirs=[];if(p.opts.dirIn)dirs.push('in');if(p.opts.dirOut)dirs.push('out');
+ const prevSel=sel?sel.key:null;RUNS=[];
+ p.vehicles.filter(v=>v.on).forEach(v=>dirs.forEach(d=>{const r=simulate(PTS,v,d);if(r){r.key=v.id+'|'+d;RUNS.push(r)}}));
+ sel=RUNS.find(r=>r.key===prevSel)||RUNS[0]||null;
+ if(sel&&(posX===null||prevSel!==sel.key||posX<sel.x0||posX>sel.x1))posX=sel.worst.xr;
+ renderRunSel();renderResults();renderView();renderChart()}
+function renderRunSel(){const s=$('runSel');s.innerHTML=RUNS.map(r=>`<option value="${r.key}">${esc(r.veh.name)} · ${r.dir==='in'?'entrada':'salida'}</option>`).join('')||'<option>Sin vehículos seleccionados</option>';if(sel)s.value=sel.key}
+$('runSel').onchange=e=>{sel=RUNS.find(r=>r.key===e.target.value);posX=sel.worst.xr;renderResults();renderView();renderChart()};
+function state(c){const req=(num(P().opts.minReq)||0)/100;if(c<0)return['b-bad','Toca'];if(c<req)return['b-bad','No cumple'];if(c<req+0.02)return['b-warn','Justo'];return['b-ok','Cumple']}
+function renderResults(){const tb=$('resTbl').tBodies[0];tb.innerHTML='';
+ RUNS.forEach(r=>{const[cl,tx]=state(r.worst.c);const tr=document.createElement('tr');tr.className='clk'+(r===sel?' sel':'');
+  tr.innerHTML=`<td><span class="sw" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${r.veh.color};margin-right:6px"></span>${esc(r.veh.name)}</td><td>${r.dir==='in'?'Entrada':'Salida'}</td><td class="num">${fmtCm(r.worst.c)}</td><td>${r.worst.elem}</td><td class="num">${prog(r.worst.px)}</td><td><span class="badge ${cl}">${tx}</span></td>`;
+  tr.onclick=()=>{sel=r;posX=r.worst.xr;renderRunSel();renderResults();renderView();renderChart()};tb.appendChild(tr)});
+ if(!RUNS.length)tb.innerHTML='<tr><td colspan="6" class="muted">Tildá al menos un vehículo y un sentido.</td></tr>';
+ const ct=$('critTbl').tBodies[0];ct.innerHTML='';const cb=$('critBtns');cb.innerHTML='';
+ if(sel){sel.crit.forEach((m,i)=>{const[cl]=state(m.c);const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${i+1}</td><td class="num"><span class="badge ${cl}">${fmtCm(m.c)}</span></td><td>${m.elem}</td><td class="num">${prog(m.px)}</td><td class="num">${prog(m.xr)}</td><td class="num">${fmt(m.sl*100,1)}%</td><td><button class="sm">Ver</button></td>`;
+  tr.querySelector('button').onclick=()=>{posX=m.xr;renderView();renderChart()};ct.appendChild(tr);
+  if(i<4){const b=document.createElement('button');b.className='sm';b.textContent=prog(m.px)+' · '+fmtCm(m.c);b.title=m.elem;b.onclick=()=>{posX=m.xr;renderView();renderChart()};cb.appendChild(b)}})}}
+
+/* ---------- dibujo del vehículo ---------- */
+const SIL={auto:{top:[[0,.345],[.004,.455],[.025,.58],[.09,.662],[.235,.69],[.37,.959],[.46,1],[.6,.993],[.735,.71],[.9,.6],[.972,.524],[1,.414]],
+ glass:[[.255,.703],[.372,.931],[.46,.962],[.594,.959],[.713,.721]],pillar:.49,doors:[.30,.49,.675],hl:[[.955,.483],[.995,.497],[.99,.538],[.95,.545]],tl:[[.002,.51],[.03,.517],[.035,.579],[.006,.572]],belt:.69},
+ van:{top:[[0,.30],[.004,.55],[.012,.93],[.03,1],[.70,1],[.80,.64],[.95,.54],[1,.42]],
+ glass:[[.06,.66],[.06,.9],[.69,.92],[.775,.66]],pillar:.33,doors:[.20,.45,.72],hl:[[.955,.46],[.995,.47],[.99,.52],[.95,.53]],tl:[[.002,.44],[.02,.44],[.02,.56],[.004,.56]],belt:.62}};
+function carSVG(r,Q,M){const v=r.v,S=SIL[r.veh.body==='van'?'van':'auto'],H=v.H,L=v.OR+v.WB+v.OF;
+ const T=s=>v.flip?(v.WB+v.OF)-s*L:s*L-v.OR;
+ const pt=(t,h)=>{const q=M(...W(Q,t,h));return q[0].toFixed(1)+','+q[1].toFixed(1)};
+ const lowPts=[];for(let t=v.WB+v.OF;t>=-v.OR-1e-9;t-=0.05)lowPts.push([t,hAt(v,t)]);lowPts.push([-v.OR,v.hR]);
+ const topPts=S.top.map(([s,h])=>[T(s),Math.max(h*H,0)]);
+ // unir: la silueta superior va de la cola física a la trompa física
+ let outline=topPts.slice();if(v.flip)outline.reverse();
+ const endT=v.WB+v.OF,startT=-v.OR;
+ outline=[[startT,v.hR]].concat(outline.filter(p=>p[0]>=startT-1e-6&&p[0]<=endT+1e-6)).concat([[endT,v.hF]]).concat(lowPts.slice(1));
+ let g=`<polygon points="${outline.map(p=>pt(...p)).join(' ')}" fill="var(--car)" fill-opacity=".75" stroke="var(--car-line)" stroke-width="1.4" stroke-linejoin="round"/>`;
+ g+=`<polygon points="${S.glass.map(([s,h])=>pt(T(s),h*H)).join(' ')}" fill="var(--glass)" fill-opacity=".45" stroke="var(--car-line)" stroke-width=".9"/>`;
+ const ln=(a,b,w,c)=>{const A=pt(...a).split(','),B=pt(...b).split(',');return`<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="${c||'var(--car-line)'}" stroke-width="${w}"/>`};
+ g+=ln([T(S.pillar),S.belt*H],[T(S.pillar),S.glass[2][1]*H],2.4);
+ S.doors.forEach(s=>g+=ln([T(s),.25*H],[T(s),S.belt*H],.8));
+ g+=ln([T(S.doors[0]),.25*H],[T(S.doors[S.doors.length-1]),.25*H],.8);
+ g+=`<polygon points="${S.hl.map(([s,h])=>pt(T(s),h*H)).join(' ')}" fill="#f4c26b" stroke="#8a5a0a" stroke-width=".7"/>`;
+ g+=`<polygon points="${S.tl.map(([s,h])=>pt(T(s),h*H)).join(' ')}" fill="#e97c7a" stroke="#962f2e" stroke-width=".7"/>`;
+ const R=r.veh.body==='van'?0.36:0.33;
+ [0,v.WB].forEach(t=>{const c=M(...W(Q,t,R)),q=M(...W(Q,t+1,R));const sc=Math.hypot(q[0]-c[0],q[1]-c[1]);
+  let arch=[];for(let a=0;a<=180;a+=10){const rr=R+0.06;arch.push(pt(t+rr*Math.cos(a*Math.PI/180),R+rr*Math.sin(a*Math.PI/180)))}
+  g+=`<polyline points="${arch.join(' ')}" fill="#222" fill-opacity=".5" stroke="var(--car-line)" stroke-width="1.1"/>`;
+  const cy=c[1],cx=c[0];const ry=Math.hypot(...(()=>{const u=M(...W(Q,t,R+1));return[u[0]-cx,u[1]-cy]})());
+  g+=`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(R*sc).toFixed(1)}" ry="${(R*ry).toFixed(1)}" fill="#2b2b29" stroke="#111"/>`;
+  g+=`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(R*.64*sc).toFixed(1)}" ry="${(R*.64*ry).toFixed(1)}" fill="#b8b6ad" stroke="#5f5e5a" stroke-width=".8"/>`;
+  for(let i=0;i<5;i++){const a=i*72*Math.PI/180;g+=`<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${(cx+Math.cos(a)*R*.6*sc).toFixed(1)}" y2="${(cy+Math.sin(a)*R*.6*ry).toFixed(1)}" stroke="#5f5e5a" stroke-width="1.3"/>`}
+  g+=`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(.05*sc).toFixed(1)}" ry="${(.05*ry).toFixed(1)}" fill="#5f5e5a"/>`});
+ return g}
+
+/* ---------- vista ---------- */
+const colC=(c)=>{const req=(num(P().opts.minReq)||0)/100;return c<Math.max(req,0)||c<0?'var(--bad)':c<req+0.02?'var(--warn)':'var(--ok)'};
+function renderView(){const svg=$('view'),Wd=svg.clientWidth||900,Hh=380;svg.setAttribute('viewBox',`0 0 ${Wd} ${Hh}`);
+ if(!PTS.length){svg.innerHTML='';return}
+ const Y=makeY(PTS);let xc,zc,k;
+ const xmin=PTS[0].x,xmax=PTS[PTS.length-1].x;
+ if(fitAll){const a=PTS[1].x-2,b=PTS[PTS.length-2].x+2;k=(Wd-40)/(b-a);xc=(a+b)/2}else{k=Wd/win;xc=sel?Math.min(Math.max(posX,sel.x0),sel.x1)+sel.v.WB/2:(xmin+xmax)/2}
+ const ke=k*vex;
+ let Q=null,m=null;if(sel){Q=pose(Y,sel.v,Math.min(Math.max(posX,sel.x0),sel.x1));m=clearance(Y,PTS.map(p=>p.x),sel.v,Q)}
+ if(fitAll){const zs=PTS.slice(1,-1).map(p=>p.z);zc=(Math.max(...zs)+Math.min(...zs))/2}else zc=Y(xc)+0.5;
+ const M=(x,z)=>[Wd/2+(x-xc)*k,Hh*0.62-(z-zc)*ke];
+ const xa=xc-Wd/2/k-1,xb=xc+Wd/2/k+1;
+ let g='';
+ // grilla de cotas
+ const zTop=zc+(Hh*0.62)/ke,zBot=zc-(Hh*0.38)/ke;const stepZ=[0.1,0.2,0.25,0.5,1,2,5].find(s=>s*ke>=40)||5;
+ for(let z=Math.ceil(zBot/stepZ)*stepZ;z<=zTop;z+=stepZ){const y=M(0,z)[1];g+=`<line x1="0" x2="${Wd}" y1="${y}" y2="${y}" class="grid"/><text x="4" y="${y-3}" class="tx2">${fmt(z,2)}</text>`}
+ const pv=PTS.filter(p=>p.x>=xa&&p.x<=xb);const gp=[{x:xa,z:Y(xa)}].concat(pv).concat([{x:xb,z:Y(xb)}]);
+ const poly=gp.map(p=>M(p.x,p.z).map(n=>n.toFixed(1)).join(',')).join(' ');
+ g+=`<polygon class="terrain" points="${poly} ${M(xb,0)[0]},${Hh} ${M(xa,0)[0]},${Hh}"/><polyline class="tline" points="${poly}"/>`;
+ // etiquetas de tramos y PVI
+ for(let i=1;i<PTS.length;i++){const a=PTS[i-1],b=PTS[i];if(b.x<xa||a.x>xb)continue;const gr=(b.z-a.z)/(b.x-a.x)*100;const mx=(Math.max(a.x,xa)+Math.min(b.x,xb))/2;const[sx,sy]=M(mx,Y(mx));
+  if((Math.min(b.x,xb)-Math.max(a.x,xa))*k>60)g+=`<text x="${sx}" y="${sy-8}" text-anchor="middle" class="tx">${fmt(gr,2)}%</text>`}
+ PTS.forEach(p=>{if(!p.pvi||p.x<xa||p.x>xb)return;const[sx,sy]=M(p.x,p.z);g+=`<circle cx="${sx}" cy="${sy}" r="2.5" fill="var(--terrain-line)"/><text transform="translate(${sx+3},${sy+8}) rotate(-90)" text-anchor="end" class="tx2">${prog(p.x)} · ${fmt(p.z,2)}</text>`});
+ if(sel){ // otros vehículos en gris? solo seleccionado
+  g+=carSVG(sel,Q,M);
+  const[mx,my]=M(m.px,m.pz),[gx,gy]=M(m.px,Y(m.px));
+  g+=`<line x1="${mx}" y1="${my}" x2="${gx}" y2="${gy}" stroke="${colC(m.c)}" stroke-width="2"/><circle cx="${mx}" cy="${my}" r="4" fill="${colC(m.c)}"/><circle cx="${mx}" cy="${my}" r="10" fill="none" stroke="${colC(m.c)}"/>`;
+  // recuadro de detalle
+  const bw=230,bh=130,bx=10,by=10,zs=Math.min(bw/0.9,bh/0.45);const mid=(m.pz+Y(m.px))/2;const Mi=(x,z)=>[bx+bw/2+(x-m.px)*zs,by+bh/2-(z-mid)*zs];
+  g+=`<defs><clipPath id="clipIn"><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="6"/></clipPath></defs>`;
+  g+=`<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="6" fill="var(--panel)" stroke="var(--line2)"/>`;
+  const gi=[],xsI=[];for(let x=m.px-0.6;x<=m.px+0.6;x+=0.02)xsI.push(x);PTS.forEach(p=>{if(Math.abs(p.x-m.px)<0.6)xsI.push(p.x)});xsI.sort((a,b)=>a-b);xsI.forEach(x=>gi.push(Mi(x,Y(x)).map(n=>n.toFixed(1)).join(',')));
+  const ens=[];for(let t=Math.max(m.t-0.6,-sel.v.OR);t<=Math.min(m.t+0.6,sel.v.WB+sel.v.OF);t+=0.01)ens.push(Mi(...W(Q,t,hAt(sel.v,t))).map(n=>n.toFixed(1)).join(','));
+  g+=`<g clip-path="url(#clipIn)"><polygon points="${gi.join(' ')} ${bx+bw},${by+bh+50} ${bx},${by+bh+50}" class="terrain"/><polyline points="${gi.join(' ')}" class="tline"/><polyline points="${ens.join(' ')}" fill="none" stroke="var(--car-line)" stroke-width="2.4"/>`;
+  const[a1,b1]=Mi(m.px,m.pz),[a2,b2]=Mi(m.px,Y(m.px));g+=`<line x1="${a1}" y1="${b1}" x2="${a2}" y2="${b2}" stroke="${colC(m.c)}" stroke-width="1.6"/><circle cx="${a1}" cy="${b1}" r="3" fill="${colC(m.c)}"/><circle cx="${a2}" cy="${b2}" r="3" fill="${colC(m.c)}"/></g>`;
+  g+=`<text x="${bx+8}" y="${by+16}" class="tx">Detalle a escala real ×${Math.round(zs/k)}</text><text x="${bx+bw-8}" y="${by+bh-8}" text-anchor="end" class="txb" style="fill:${colC(m.c)}">${fmtCm(m.c)}</text>`;
+  if(vex>1)g+=`<text x="${Wd-8}" y="18" text-anchor="end" class="tx">Escala vertical ×${vex} (vehículo deformado)</text>`;
+  // stats
+  $('stats').innerHTML=[['Despeje en esta posición',fmtCm(m.c),m.elem+' · '+prog(m.px)],['Inclinación del vehículo',fmt(Q.sl*100,1)+'%','eje '+(sel.v.flip?'delantero':'trasero')+' en '+prog(Q.xr)],['Peor caso del recorrido',fmtCm(sel.worst.c),sel.worst.elem+' · '+prog(sel.worst.px)]].map(([l,v,s])=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div><div class="muted">${s}</div></div>`).join('');
+  const pr=$('pos');pr.value=Math.round((posX-sel.x0)/(sel.x1-sel.x0)*10000);
+ }else $('stats').innerHTML='';
+ svg.innerHTML=g}
+$('pos').oninput=e=>{if(!sel)return;fitAll=false;posX=sel.x0+(sel.x1-sel.x0)*e.target.value/10000;renderView();renderChart()};
+$('win').oninput=e=>{win=+e.target.value;fitAll=false;$('winV').textContent=win+' m';renderView()};
+$('fitAll').onclick=()=>{fitAll=!fitAll;$('fitAll').classList.toggle('on',fitAll);renderView()};
+$('vexSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;vex=+b.dataset.v;[...$('vexSeg').children].forEach(c=>c.classList.toggle('on',c===b));renderView()};
+
+/* ---------- gráfico ---------- */
+let CH=null;
+function renderChart(){const svg=$('chart'),Wd=svg.clientWidth||900,Hh=230;svg.setAttribute('viewBox',`0 0 ${Wd} ${Hh}`);
+ if(!RUNS.length){svg.innerHTML='';$('legend').innerHTML='';return}
+ const L=46,R=10,T=10,B=28;const xs=RUNS.flatMap(r=>[r.arr[0].xm,r.arr[r.arr.length-1].xm]);const x0=Math.min(...xs),x1=Math.max(...xs);
+ const req=(num(P().opts.minReq)||0)/100;const cmin=Math.min(...RUNS.map(r=>r.worst.c),req,0);const ymin=Math.floor(Math.min(cmin,-0.01)*100)/100-0.01,ymax=0.30;
+ const X=x=>L+(x-x0)/(x1-x0)*(Wd-L-R),Yc=c=>T+(ymax-Math.min(c,ymax))/(ymax-ymin)*(Hh-T-B);
+ let g='';for(let c=Math.ceil(ymin*100/5)*5;c<=ymax*100;c+=5){const y=Yc(c/100);g+=`<line x1="${L}" x2="${Wd-R}" y1="${y}" y2="${y}" class="grid"/><text x="${L-5}" y="${y+3}" text-anchor="end" class="tx2">${c}</text>`}
+ g+=`<text x="10" y="${T+8}" class="tx2">cm</text>`;
+ const stepX=[1,2,5,10,20].find(s=>(Wd-L-R)/((x1-x0)/s)>=60)||20;for(let x=Math.ceil(x0/stepX)*stepX;x<=x1;x+=stepX){g+=`<text x="${X(x)}" y="${Hh-10}" text-anchor="middle" class="tx2">${prog(x)}</text><line x1="${X(x)}" x2="${X(x)}" y1="${Hh-B}" y2="${Hh-B+4}" stroke="var(--ink3)"/>`}
+ PTS.forEach(p=>{if(p.pvi&&p.x>=x0&&p.x<=x1)g+=`<line x1="${X(p.x)}" x2="${X(p.x)}" y1="${T}" y2="${Hh-B}" stroke="var(--line2)" stroke-dasharray="2 4"/>`});
+ g+=`<line x1="${L}" x2="${Wd-R}" y1="${Yc(0)}" y2="${Yc(0)}" stroke="var(--bad)" stroke-width="1"/>`;
+ if(req>0)g+=`<line x1="${L}" x2="${Wd-R}" y1="${Yc(req)}" y2="${Yc(req)}" stroke="var(--warn)" stroke-dasharray="6 4"/><text x="${Wd-R-4}" y="${Yc(req)-4}" text-anchor="end" class="tx2">mínimo exigido</text>`;
+ RUNS.forEach(r=>{const step=Math.max(1,Math.floor(r.arr.length/(Wd*1.5)));let d='';for(let i=0;i<r.arr.length;i+=step){const a=r.arr[i];d+=(i?'L':'M')+X(a.xm).toFixed(1)+','+Yc(a.c).toFixed(1)}
+  g+=`<path d="${d}" fill="none" stroke="${r.veh.color}" stroke-width="${r===sel?2.4:1.4}" ${r.dir==='out'?'stroke-dasharray="6 4"':''} opacity="${r===sel?1:.75}"/>`});
+ if(sel){const i=Math.round((posX-sel.x0)/0.01);const a=sel.arr[Math.max(0,Math.min(sel.arr.length-1,i))];g+=`<line x1="${X(a.xm)}" x2="${X(a.xm)}" y1="${T}" y2="${Hh-B}" stroke="var(--ink)" stroke-width="1"/><circle cx="${X(a.xm)}" cy="${Yc(a.c)}" r="4" fill="${sel.veh.color}" stroke="var(--panel)" stroke-width="2"/>`}
+ g+=`<text x="${Wd-R}" y="${Hh-B-4}" text-anchor="end" class="tx2">progresiva del punto medio entre ejes</text>`;
+ svg.innerHTML=g;CH={X,x0,x1,L,R,Wd};
+ $('legend').innerHTML=RUNS.map(r=>`<span class="row" style="gap:4px"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="${r.veh.color}" stroke-width="2.5" ${r.dir==='out'?'stroke-dasharray="5 3"':''}/></svg>${esc(r.veh.name)} · ${r.dir==='in'?'entrada':'salida'}</span>`).join('')}
+$('chart').onclick=e=>{if(!sel||!CH)return;const rc=$('chart').getBoundingClientRect();const x=(e.clientX-rc.left)/rc.width*CH.Wd;const xm=CH.x0+(x-CH.L)/(CH.Wd-CH.L-CH.R)*(CH.x1-CH.x0);
+ let best=sel.arr[0];for(const a of sel.arr)if(Math.abs(a.xm-xm)<Math.abs(best.xm-xm))best=a;posX=best.xr;fitAll=false;$('fitAll').classList.remove('on');renderView();renderChart()};
+
+/* ---------- historial ---------- */
+function summary(){return RUNS.map(r=>({veh:r.veh.name,color:r.veh.color,dir:r.dir,c:r.worst.c,elem:r.worst.elem,px:r.worst.px}))}
+function snapshot(name,note){const p=P();return{id:uid(),name,date:new Date().toISOString(),ramp:clone(p.ramp),vehicles:clone(p.vehicles),opts:clone(p.opts),summary:summary()}}
+$('simSave').onclick=()=>{const n=$('simName').value.trim()||('Simulación '+(P().sims.length+1));P().sims.unshift(snapshot(n));$('simName').value='';save();renderHist();setStatus('Simulación guardada')};
+function renderHist(){const L=$('histList');const S=P().sims;
+ if(!S.length){L.innerHTML='<p class="muted">Todavía no hay simulaciones guardadas en este proyecto.</p>';return}
+ L.innerHTML='';S.forEach((s,k)=>{const d=document.createElement('div');d.className='hist';
+  const tr=s.ramp.tramos.map(t=>`${fmt(num(t.L))} m @ ${fmt(num(t.i),2)}%`).join(' · ');
+  d.innerHTML=`<div class="row"><b class="grow">${esc(s.name)}</b><span class="muted">${new Date(s.date).toLocaleString()}</span><button class="sm" data-a="res">Restaurar</button><button class="sm" data-a="ren">Renombrar</button><button class="sm ic" data-a="del" title="Eliminar">✕</button></div>
+  <div class="muted" style="margin-top:2px">${esc(tr)}</div>
+  <div class="chips">${(s.summary||[]).map(u=>{const[cl]=state(u.c);return`<span class="badge ${cl}" title="${esc(u.elem)} · ${prog(u.px)}">${esc(u.veh)} ${u.dir==='out'?'(salida)':''}: ${fmtCm(u.c)}</span>`}).join('')}</div>`;
+  d.querySelector('[data-a=res]').onclick=()=>{P().sims.unshift(snapshot('Autoguardado antes de restaurar "'+s.name+'"'));const p=P();p.ramp=clone(s.ramp);p.vehicles=clone(s.vehicles);p.opts=Object.assign({},p.opts,clone(s.opts));save();loadProject();setStatus('Restaurado: '+s.name)};
+  d.querySelector('[data-a=ren]').onclick=()=>{const n=prompt('Nuevo nombre',s.name);if(n){s.name=n;save();renderHist()}};
+  d.querySelector('[data-a=del]').onclick=()=>{if(confirm('¿Eliminar la simulación "'+s.name+'"?')){P().sims.splice(k,1);save();renderHist()}};
+  L.appendChild(d)})}
+
+/* ---------- inicio ---------- */
+function loadProject(){sel=null;posX=null;renderProjects();renderRamp();renderVehicles();renderOpts();renderHist();runAll()}
+window.addEventListener('resize',()=>{renderView();renderChart()});
+load();$('winV').textContent=win+' m';[...$('vexSeg').children].forEach(c=>c.classList.toggle('on',+c.dataset.v===vex));
+loadProject();
+if(!storageOK)setStatus('Este navegador no permite guardar localmente: usá Exportar proyecto.');
+</script>
+</body>
+</html>
